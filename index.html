@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SportHub</title>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f7a3a">
+
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body data-theme="dark">
+    <!-- Menu Drawer Overlay -->
+    <div id="drawer-overlay" class="drawer-overlay"></div>
+
+    <!-- Menu Side Drawer -->
+    <aside id="menu-drawer" class="menu-drawer">
+        <div class="drawer-header">
+            <div class="drawer-logo">
+                <img src="Logo.png" alt="SportHub Logo" class="logo-img-small">
+                <span class="logo-text-small">Sport<span class="highlight">Hub</span><span class="dot">.</span></span>
+            </div>
+            <button id="close-drawer-btn" class="close-btn" aria-label="Fechar Menu">&times;</button>
+        </div>
+        <div class="drawer-content">
+            <!-- Theme Toggle -->
+            <button id="theme-toggle" class="drawer-btn">
+                <span>🌓 Alternar Tema</span>
+            </button>
+
+            <!-- Notification Toggle -->
+            <button id="notification-btn" class="drawer-btn">
+                <span id="notification-btn-text">🔔 Ativar Notificações</span>
+            </button>
+
+            <!-- Authentication / User Actions -->
+            <div class="auth-section">
+                <button id="login-btn" class="drawer-btn login-btn">
+                    <span>🔑 Entrar com Google</span>
+                </button>
+
+                <div id="user-info" class="user-info-container hidden">
+                    <div class="user-profile">
+                        <img id="user-avatar" src="" alt="Avatar" class="user-avatar-img">
+                        <span class="user-label">Conectado</span>
+                    </div>
+                    <button id="logout-btn" class="drawer-btn logout-btn">
+                        <span>🚪 Sair</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <header>
+        <div class="logo">
+            <img src="Logo.png" alt="SportHub Logo" class="logo-img">
+            <span class="logo-text">Sport<span class="highlight">Hub</span><span class="dot">.</span></span>
+        </div>
+        <button id="hamburger-btn" class="hamburger-btn" aria-label="Abrir Menu">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+    </header>
+
+    <main>
+        <section class="featured-carousel-section">
+            <div class="carousel-header">
+                <h2>Destaque de Hoje</h2>
+                <div class="carousel-nav">
+                    <button id="carousel-prev" class="carousel-arrow" aria-label="Anterior">‹</button>
+                    <button id="carousel-next" class="carousel-arrow" aria-label="Próximo">›</button>
+                </div>
+            </div>
+            <div class="carousel-container">
+                <div id="carousel-track" class="carousel-track">
+                    <div class="carousel-loading">Carregando jogos em destaque...</div>
+                </div>
+            </div>
+        </section>
+
+        <div class="content-grid">
+            <aside>
+                <h3>Esportes</h3>
+                <div class="search-bar">
+                    <input type="text" id="global-search" placeholder="Pesquisar campeonatos...">
+                </div>
+                <ul id="sports-list"></ul>
+
+                <h3>Ligas Favoritas</h3>
+                <ul id="favorites-list"></ul>
+            </aside>
+
+            <section class="calendar-container">
+                <div class="panel-header">
+                    <div class="view-tabs" role="tablist" aria-label="Visualização">
+                        <button class="tab active" id="tab-list" data-view="list" role="tab" aria-controls="view-list"
+                            aria-selected="true">📋 Lista</button>
+                        <button class="tab" id="tab-calendar" data-view="calendar" role="tab"
+                            aria-controls="view-calendar" aria-selected="false">🗓️ Calendário</button>
+                    </div>
+                    <div class="panel-actions">
+                        <button id="refresh-events" class="ghost" title="Atualizar eventos">↻ Atualizar</button>
+                    </div>
+                </div>
+
+                <div id="view-list" class="view view-active" role="tabpanel" aria-labelledby="tab-list">
+                    <div class="upcoming-header">
+                        <h3>Próximos jogos</h3>
+                        <div id="upcoming-subtitle" class="upcoming-sub">Baseado nas ligas favoritas</div>
+                    </div>
+                    <div id="upcoming-list" class="upcoming-list"></div>
+                </div>
+
+                <div id="view-calendar" class="view" role="tabpanel" aria-labelledby="tab-calendar">
+                    <div id="calendar"></div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Match Details Modal -->
+    <div id="details-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <span id="modal-sport-badge" class="modal-sport-badge">⚽ FUTEBOL</span>
+                <button id="modal-close" class="modal-close-btn" aria-label="Fechar">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-league-info" id="modal-league-name">La Liga</div>
+                <div class="modal-match-title">
+                    <span id="modal-team-a" class="modal-team-name">Real Madrid</span>
+                    <span class="modal-vs">VS</span>
+                    <span id="modal-team-b" class="modal-team-name">Barcelona</span>
+                </div>
+
+                <hr class="modal-divider">
+
+                <div class="modal-info-grid">
+                    <div class="modal-info-item">
+                        <span class="info-label">📍 Onde vai ser</span>
+                        <span class="info-value" id="modal-venue">Estádio Santiago Bernabéu (Madrid)</span>
+                    </div>
+                    <div class="modal-info-item">
+                        <span class="info-label">📺 Onde assistir no Brasil</span>
+                        <span class="info-value" id="modal-tv">ESPN e Disney+</span>
+                    </div>
+                    <div class="modal-info-item full-width">
+                        <span class="info-label">📊 Status na Temporada</span>
+                        <span class="info-value" id="modal-stats">-</span>
+                    </div>
+                    <div class="modal-info-item">
+                        <span class="info-label">📅 Data e Horário (Brasília)</span>
+                        <span class="info-value" id="modal-datetime">-</span>
+                    </div>
+                    <div class="modal-info-item">
+                        <span class="info-label">🎲 Probabilidades de Vitória</span>
+                        <span class="info-value" id="modal-odds">-</span>
+                    </div>
+                </div>
+
+                <div class="modal-stats-container">
+                    <h4 class="modal-stats-title">📊 Comparativo das Equipes</h4>
+                    <div class="comparison-grid">
+                        <!-- Column Headers -->
+                        <div class="comp-header-blank"></div>
+                        <div class="comp-header-team-a" id="modal-comp-name-a">Time A</div>
+                        <div class="comp-header-team-b" id="modal-comp-name-b">Time B</div>
+                        
+                        <!-- Row 1: Posição -->
+                        <div class="comp-row-label" id="modal-comp-pos-label">🏆 Posição na Liga</div>
+                        <div class="comp-val-a" id="modal-comp-pos-a">-</div>
+                        <div class="comp-val-b" id="modal-comp-pos-b">-</div>
+
+                        <!-- Row 2: Últimos 5 Jogos -->
+                        <div class="comp-row-label" id="modal-comp-form-label">📈 Forma Recente</div>
+                        <div class="comp-val-a" id="modal-comp-form-a">-</div>
+                        <div class="comp-val-b" id="modal-comp-form-b">-</div>
+
+                        <!-- Row 3: Artilheiro / Destaque -->
+                        <div class="comp-row-label" id="modal-comp-scorer-label">⚽ Artilheiro</div>
+                        <div class="comp-val-a" id="modal-comp-scorer-a">-</div>
+                        <div class="comp-val-b" id="modal-comp-scorer-b">-</div>
+                        
+                        <!-- Row 4: Média de Gols / Pontos -->
+                        <div class="comp-row-label" id="modal-comp-metric-label">🥅 Média de Gols</div>
+                        <div class="comp-val-a" id="modal-comp-metric-a">-</div>
+                        <div class="comp-val-b" id="modal-comp-metric-b">-</div>
+                    </div>
+
+                    <!-- Confrontos Diretos Box -->
+                    <div class="h2h-box">
+                        <div class="h2h-title" id="modal-h2h-title-label">⚔️ Confrontos Diretos (Histórico H2H)</div>
+                        <div class="h2h-stats-row">
+                            <span id="modal-h2h-wins-a">-</span>
+                            <span id="modal-h2h-draws">-</span>
+                            <span id="modal-h2h-wins-b">-</span>
+                        </div>
+                        <div class="h2h-bar-container">
+                            <div class="h2h-bar-a" id="modal-h2h-bar-a" style="width: 33.3%;"></div>
+                            <div class="h2h-bar-draw" id="modal-h2h-bar-draw" style="width: 33.3%;"></div>
+                            <div class="h2h-bar-b" id="modal-h2h-bar-b" style="width: 33.3%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+
+</html>

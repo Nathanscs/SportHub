@@ -1,0 +1,38 @@
+name: Daily SportHub Scraper
+
+on:
+  schedule:
+    # Roda todos os dias às 06:00 UTC (03:00 no fuso de Brasília)
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    # Permite rodar manualmente a qualquer momento pela aba Actions no GitHub
+
+jobs:
+  scrape-and-update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Create Service Account Key File
+        shell: bash
+        run: |
+          if [ -n "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" ]; then
+            echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > serviceAccountKey.json
+            echo "Chave de conta de serviço criada com sucesso."
+          else
+            echo "AVISO: A secret FIREBASE_SERVICE_ACCOUNT não foi configurada. O script tentará usar as chaves públicas do config.js."
+          fi
+
+      - name: Run Scraper
+        run: node scraper.js

@@ -1,0 +1,20 @@
+{
+  "name": "eSports Tracker",
+  "short_name": "eSports",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f6fff8",
+  "theme_color": "#0f7a3a",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3256/3256114.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3256/3256114.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

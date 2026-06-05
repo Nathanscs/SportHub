@@ -2046,18 +2046,18 @@ async function showMatchDetails(eventTitle, leagueName, sportName, dateText, tim
     const isBasketball = sportUpper.includes('BASKET') || sportUpper.includes('BASQUETE');
     let sportEmoji = getSportEmoji(sportName);
 
-    const isSurfOrSkate = sportUpper.includes('SURF') || sportUpper.includes('SKATE');
+    const isIndividualOrMotorsport = sportUpper.includes('SURF') || sportUpper.includes('SKATE') || sportUpper.includes('MOTOR') || leagueLower.includes('formula') || leagueLower.includes('motogp') || leagueLower.includes('superbike') || leagueLower.includes('f1');
 
     // Mostra/oculta o divisor "VS"
     const vsEl = modal.querySelector('.modal-vs');
     if (vsEl) {
-        vsEl.style.display = isSurfOrSkate ? 'none' : 'inline';
+        vsEl.style.display = isIndividualOrMotorsport ? 'none' : 'inline';
     }
 
     if (sportBadge) sportBadge.textContent = `${sportEmoji} ${sportUpper}`;
     if (leagueEl) leagueEl.textContent = leagueName || 'Campeonato';
-    if (teamAEl) teamAEl.textContent = isSurfOrSkate ? eventTitle : teamA;
-    if (teamBEl) teamBEl.textContent = isSurfOrSkate ? '' : (teamB || 'Adversário');
+    if (teamAEl) teamAEl.textContent = isIndividualOrMotorsport ? eventTitle : teamA;
+    if (teamBEl) teamBEl.textContent = isIndividualOrMotorsport ? '' : (teamB || 'Adversário');
 
     // Clear and set comparison UI loading states
     document.getElementById('modal-comp-name-a').textContent = teamA;
@@ -2186,7 +2186,7 @@ async function showMatchDetails(eventTitle, leagueName, sportName, dateText, tim
     const existingRankings = modal.querySelector('.individual-rankings-box');
     if (existingRankings) existingRankings.remove();
 
-    if (isSurfOrSkate) {
+    if (isIndividualOrMotorsport) {
         // Oculta comparativo de equipes e H2H
         if (compGrid) compGrid.style.display = 'none';
         if (h2hBox) h2hBox.style.display = 'none';
@@ -2194,7 +2194,7 @@ async function showMatchDetails(eventTitle, leagueName, sportName, dateText, tim
         const statsTitle = modal.querySelector('.modal-stats-title');
         if (statsTitle) {
             statsTitle.id = 'modal-stats-title-el';
-            statsTitle.textContent = '📊 Ranking do Campeonato';
+            statsTitle.textContent = '📊 Classificação do Campeonato';
         }
 
         // Cria container para o ranking
@@ -2206,7 +2206,7 @@ async function showMatchDetails(eventTitle, leagueName, sportName, dateText, tim
         rankingsBox.style.borderRadius = 'var(--radius)';
         rankingsBox.style.padding = '1.2rem';
         rankingsBox.style.boxShadow = 'var(--shadow)';
-        rankingsBox.innerHTML = '<div style="text-align: center; color: var(--muted-color)">Carregando rankings...</div>';
+        rankingsBox.innerHTML = '<div style="text-align: center; color: var(--muted-color)">Carregando tabelas do campeonato...</div>';
         
         const statsContainer = modal.querySelector('.modal-stats-container');
         if (statsContainer) statsContainer.appendChild(rankingsBox);
@@ -2214,31 +2214,52 @@ async function showMatchDetails(eventTitle, leagueName, sportName, dateText, tim
         // Carrega rankings do Firestore
         (async () => {
             try {
-                const leagueId = leagueLower.includes('surf') || sportUpper.includes('SURF') ? 'wsl' : 'sls';
+                let doc1Ref, doc2Ref;
+                let tab1Name = "Masculino";
+                let tab2Name = "Feminino";
+
+                const isF1 = leagueLower.includes('formula 1') || leagueLower.includes('f1') || leagueLower.includes('4370') || eventTitle.toLowerCase().includes('f1') || eventTitle.toLowerCase().includes('formula 1');
+
+                if (isF1) {
+                    doc1Ref = doc(db, "sport_rankings", "f1-drivers");
+                    doc2Ref = doc(db, "sport_rankings", "f1-constructors");
+                    tab1Name = "Pilotos";
+                    tab2Name = "Construtores";
+                } else if (sportUpper.includes('MOTOR') || leagueLower.includes('formula') || leagueLower.includes('motogp') || leagueLower.includes('superbike')) {
+                    // Outras categorias de automobilismo/motociclismo
+                    doc1Ref = doc(db, "sport_rankings", `${leagueLower.replace(/[^a-z0-9]+/g, '-')}-drivers`);
+                    doc2Ref = doc(db, "sport_rankings", `${leagueLower.replace(/[^a-z0-9]+/g, '-')}-teams`);
+                    tab1Name = "Pilotos";
+                    tab2Name = "Equipes";
+                } else {
+                    // WSL / SLS (Surfe / Skate)
+                    const leagueId = leagueLower.includes('surf') || sportUpper.includes('SURF') ? 'wsl' : 'sls';
+                    doc1Ref = doc(db, "sport_rankings", `${leagueId}-men`);
+                    doc2Ref = doc(db, "sport_rankings", `${leagueId}-women`);
+                    tab1Name = "Masculino";
+                    tab2Name = "Feminino";
+                }
                 
-                const docMenRef = doc(db, "sport_rankings", `${leagueId}-men`);
-                const docWomenRef = doc(db, "sport_rankings", `${leagueId}-women`);
-                
-                const [snapMen, snapWomen] = await Promise.all([
-                    getDoc(docMenRef),
-                    getDoc(docWomenRef)
+                const [snap1, snap2] = await Promise.all([
+                    getDoc(doc1Ref),
+                    getDoc(doc2Ref)
                 ]);
 
-                let menRank = snapMen.exists() ? snapMen.data().rankings || [] : [];
-                let womenRank = snapWomen.exists() ? snapWomen.data().rankings || [] : [];
+                let rank1 = snap1.exists() ? snap1.data().rankings || [] : [];
+                let rank2 = snap2.exists() ? snap2.data().rankings || [] : [];
 
-                if (menRank.length === 0 && womenRank.length === 0) {
-                    rankingsBox.innerHTML = '<div style="text-align: center; color: var(--muted-color); padding: 1rem 0;">Rankings não disponíveis. Execute o scraper para atualizar.</div>';
+                if (rank1.length === 0 && rank2.length === 0) {
+                    rankingsBox.innerHTML = '<div style="text-align: center; color: var(--muted-color); padding: 1rem 0;">Tabelas não disponíveis no momento. Execute o scraper para atualizar.</div>';
                     return;
                 }
 
                 rankingsBox.innerHTML = `
                     <div class="ranking-tabs" style="display: flex; gap: 10px; margin-bottom: 1rem;">
-                        <button class="rank-tab-btn active-rank-tab" id="btn-rank-men" style="background: var(--accent-color); color: white; border: none; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: background 0.2s;">Masculino</button>
-                        <button class="rank-tab-btn" id="btn-rank-women" style="background: transparent; color: var(--text-color); border: 1px solid var(--border-color); padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: border-color 0.2s;">Feminino</button>
+                        <button class="rank-tab-btn active-rank-tab" id="btn-rank-1" style="background: var(--accent-color); color: white; border: none; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: background 0.2s;">${tab1Name}</button>
+                        <button class="rank-tab-btn" id="btn-rank-2" style="background: transparent; color: var(--text-color); border: 1px solid var(--border-color); padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: border-color 0.2s;">${tab2Name}</button>
                     </div>
                     
-                    <div id="rank-list-men" class="rank-list-container">
+                    <div id="rank-list-1" class="rank-list-container">
                         <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
                             <thead>
                                 <tr style="border-bottom: 2px solid var(--border-color); color: var(--muted-color); font-size: 0.8rem; text-transform: uppercase;">
@@ -2249,11 +2270,14 @@ async function showMatchDetails(eventTitle, leagueName, sportName, dateText, tim
                                 </tr>
                             </thead>
                             <tbody>
-                                ${menRank.slice(0, 10).map(r => `
+                                ${rank1.slice(0, 25).map(r => `
                                     <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.15s;">
                                         <td style="padding: 0.6rem 0.4rem; font-weight: 800;">${r.position}</td>
-                                        <td style="padding: 0.6rem 0.4rem; font-weight: 700; color: var(--accent-color);">${r.name}</td>
-                                        <td style="padding: 0.6rem 0.4rem; color: var(--muted-color);">${r.country}</td>
+                                        <td style="padding: 0.6rem 0.4rem; font-weight: 700; color: var(--accent-color);">
+                                            ${r.name}
+                                            ${r.team ? `<span style="font-size: 0.75rem; color: var(--muted-color); font-weight: normal; display: block;">${r.team}</span>` : ''}
+                                        </td>
+                                        <td style="padding: 0.6rem 0.4rem; color: var(--muted-color);">${r.country || '-'}</td>
                                         <td style="padding: 0.6rem 0.4rem; font-weight: 800; text-align: right; color: var(--text-color);">${r.points}</td>
                                     </tr>
                                 `).join('')}
@@ -2261,22 +2285,20 @@ async function showMatchDetails(eventTitle, leagueName, sportName, dateText, tim
                         </table>
                     </div>
 
-                    <div id="rank-list-women" class="rank-list-container" style="display: none;">
+                    <div id="rank-list-2" class="rank-list-container" style="display: none;">
                         <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
                             <thead>
                                 <tr style="border-bottom: 2px solid var(--border-color); color: var(--muted-color); font-size: 0.8rem; text-transform: uppercase;">
                                     <th style="padding: 0.6rem 0.4rem; width: 50px;">Pos</th>
-                                    <th style="padding: 0.6rem 0.4rem;">Nome</th>
-                                    <th style="padding: 0.6rem 0.4rem; width: 70px;">País</th>
+                                    <th style="padding: 0.6rem 0.4rem;">Equipe / Nome</th>
                                     <th style="padding: 0.6rem 0.4rem; text-align: right; width: 100px;">Pontos</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                ${womenRank.slice(0, 10).map(r => `
+                                ${rank2.slice(0, 25).map(r => `
                                     <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.15s;">
                                         <td style="padding: 0.6rem 0.4rem; font-weight: 800;">${r.position}</td>
                                         <td style="padding: 0.6rem 0.4rem; font-weight: 700; color: var(--accent-color);">${r.name}</td>
-                                        <td style="padding: 0.6rem 0.4rem; color: var(--muted-color);">${r.country}</td>
                                         <td style="padding: 0.6rem 0.4rem; font-weight: 800; text-align: right; color: var(--text-color);">${r.points}</td>
                                     </tr>
                                 `).join('')}
@@ -2285,31 +2307,31 @@ async function showMatchDetails(eventTitle, leagueName, sportName, dateText, tim
                     </div>
                 `;
 
-                const btnMen = rankingsBox.querySelector('#btn-rank-men');
-                const btnWomen = rankingsBox.querySelector('#btn-rank-women');
-                const listMen = rankingsBox.querySelector('#rank-list-men');
-                const listWomen = rankingsBox.querySelector('#rank-list-women');
+                const btn1 = rankingsBox.querySelector('#btn-rank-1');
+                const btn2 = rankingsBox.querySelector('#btn-rank-2');
+                const list1 = rankingsBox.querySelector('#rank-list-1');
+                const list2 = rankingsBox.querySelector('#rank-list-2');
 
-                btnMen.onclick = () => {
-                    btnMen.style.background = 'var(--accent-color)';
-                    btnMen.style.color = 'white';
-                    btnMen.style.border = 'none';
-                    btnWomen.style.background = 'transparent';
-                    btnWomen.style.color = 'var(--text-color)';
-                    btnWomen.style.border = '1px solid var(--border-color)';
-                    listMen.style.display = 'block';
-                    listWomen.style.display = 'none';
+                btn1.onclick = () => {
+                    btn1.style.background = 'var(--accent-color)';
+                    btn1.style.color = 'white';
+                    btn1.style.border = 'none';
+                    btn2.style.background = 'transparent';
+                    btn2.style.color = 'var(--text-color)';
+                    btn2.style.border = '1px solid var(--border-color)';
+                    list1.style.display = 'block';
+                    list2.style.display = 'none';
                 };
 
-                btnWomen.onclick = () => {
-                    btnWomen.style.background = 'var(--accent-color)';
-                    btnWomen.style.color = 'white';
-                    btnWomen.style.border = 'none';
-                    btnMen.style.background = 'transparent';
-                    btnMen.style.color = 'var(--text-color)';
-                    btnMen.style.border = '1px solid var(--border-color)';
-                    listWomen.style.display = 'block';
-                    listMen.style.display = 'none';
+                btn2.onclick = () => {
+                    btn2.style.background = 'var(--accent-color)';
+                    btn2.style.color = 'white';
+                    btn2.style.border = 'none';
+                    btn1.style.background = 'transparent';
+                    btn1.style.color = 'var(--text-color)';
+                    btn1.style.border = '1px solid var(--border-color)';
+                    list2.style.display = 'block';
+                    list1.style.display = 'none';
                 };
 
             } catch (err) {

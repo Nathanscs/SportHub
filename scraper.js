@@ -417,6 +417,120 @@ async function scrapeSLS(browser) {
   await page.close();
 }
 
+// 5. Scraping F1 (Formula 1)
+async function scrapeF1(browser) {
+  console.log("Iniciando raspagem da Formula 1...");
+  const page = await browser.newPage();
+  
+  // Ignorar erros de certificado SSL (importante para ambientes corporativos/VPN)
+  await page.setBypassCSP(true);
+  
+  // A. Ranking de Pilotos
+  console.log("F1: Raspando ranking de pilotos...");
+  let driverRankings = [];
+  try {
+    await page.goto('https://www.formula1.com/en/results.html/2026/drivers.html', { waitUntil: 'networkidle2', timeout: 60000 });
+    driverRankings = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('tr')).slice(1); // ignora o cabeçalho
+      const list = [];
+      rows.forEach(row => {
+        const cells = Array.from(row.querySelectorAll('td'));
+        if (cells.length >= 5) {
+          const pos = parseInt(cells[0].textContent.trim());
+          const nationality = cells[2].textContent.trim();
+          const points = cells[4].textContent.trim();
+          
+          // Extrai o nome completo do piloto a partir do link do perfil (mais robusto contra CSS responsivo)
+          const anchor = cells[1].querySelector('a');
+          let name = "";
+          if (anchor) {
+            const href = anchor.getAttribute('href') || '';
+            const parts = href.split('/');
+            const slug = parts[parts.length - 1] || '';
+            name = slug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+          } else {
+            name = cells[1].textContent.trim();
+          }
+          
+          // Extrai o nome da equipe
+          const teamAnchor = cells[3].querySelector('a');
+          const team = teamAnchor ? teamAnchor.textContent.trim() : cells[3].textContent.trim();
+          
+          if (!isNaN(pos) && name) {
+            list.push({
+              position: pos,
+              name: name,
+              country: nationality,
+              points: `${points} PTS`,
+              team: team
+            });
+          }
+        }
+      });
+      return list;
+    });
+  } catch (err) {
+    console.error("F1: Erro ao raspar pilotos:", err);
+  }
+  
+  console.log(`F1: Raspados ${driverRankings.length} pilotos.`);
+  if (driverRankings.length > 0) {
+    await saveDocument('sport_rankings', 'f1-drivers', {
+      sport: 'Automobilismo',
+      leagueId: '4370',
+      category: 'pilotos',
+      updatedAt: new Date().toISOString(),
+      rankings: driverRankings
+    });
+  }
+  
+  // B. Ranking de Construtores
+  console.log("F1: Raspando ranking de construtores...");
+  let teamRankings = [];
+  try {
+    await page.goto('https://www.formula1.com/en/results.html/2026/team.html', { waitUntil: 'networkidle2', timeout: 60000 });
+    teamRankings = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('tr')).slice(1);
+      const list = [];
+      rows.forEach(row => {
+        const cells = Array.from(row.querySelectorAll('td'));
+        if (cells.length >= 3) {
+          const pos = parseInt(cells[0].textContent.trim());
+          const points = cells[2].textContent.trim();
+          
+          const anchor = cells[1].querySelector('a');
+          const name = anchor ? anchor.textContent.trim() : cells[1].textContent.trim();
+          
+          if (!isNaN(pos) && name) {
+            list.push({
+              position: pos,
+              name: name,
+              country: '',
+              points: `${points} PTS`
+            });
+          }
+        }
+      });
+      return list;
+    });
+  } catch (err) {
+    console.error("F1: Erro ao raspar construtores:", err);
+  }
+  
+  console.log(`F1: Raspados ${teamRankings.length} construtores.`);
+  if (teamRankings.length > 0) {
+    await saveDocument('sport_rankings', 'f1-constructors', {
+      sport: 'Automobilismo',
+      leagueId: '4370',
+      category: 'construtores',
+      updatedAt: new Date().toISOString(),
+      rankings: teamRankings
+    });
+  }
+  
+  await page.close();
+}
+
 // Execução principal
 (async () => {
   console.log("--- INICIANDO PROCESSO DE SCRAPING DE ESPORTES ---");
@@ -424,12 +538,14 @@ async function scrapeSLS(browser) {
   
   const browser = await puppeteer.launch({
     headless: 'new',
+    ignoreHTTPSErrors: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox']
   });
 
   try {
     await scrapeWSL(browser);
     await scrapeSLS(browser);
+    await scrapeF1(browser);
     console.log("--- SCRAPING CONCLUÍDO COM SUCESSO! ---");
   } catch (error) {
     console.error("Erro crítico no processo de scraping:", error);
@@ -438,3 +554,4 @@ async function scrapeSLS(browser) {
     process.exit(0);
   }
 })();
+

@@ -855,7 +855,7 @@ async function fetchLeagues(sportNameId, nomePtBr) {
     const list = document.getElementById('sports-list');
     list.innerHTML = '<li>Buscando ligas...</li>';
 
-    if (sportNameId === "Surfing" || sportNameId === "Skateboarding") {
+    if (sportNameId === "Surfing" || sportNameId === "Skateboarding" || sportNameId === "eSports" || sportNameId === "Esports") {
         list.innerHTML = '';
         const headerLi = document.createElement('li');
         headerLi.innerHTML = `<strong>Ligas de ${nomePtBr}</strong>`;
@@ -866,17 +866,52 @@ async function fetchLeagues(sportNameId, nomePtBr) {
         list.appendChild(backLi);
         document.getElementById('back-sports-btn').onclick = fetchSports;
 
-        const league = sportNameId === "Surfing"
-            ? { id: 'wsl', nome: 'World Surf League (WSL)' }
-            : { id: 'sls', nome: 'Street League Skateboarding (SLS)' };
+        const customLeagues = [];
+        if (sportNameId === "Surfing") {
+            customLeagues.push({ id: 'wsl', nome: 'World Surf League (WSL)' });
+        } else if (sportNameId === "Skateboarding") {
+            customLeagues.push({ id: 'sls', nome: 'Street League Skateboarding (SLS)' });
+        } else {
+            customLeagues.push(
+                { id: 'cblol', nome: 'CBLOL (League of Legends)' },
+                { id: 'cs2_tier_s', nome: 'CS2: Campeonatos Tier S' }
+            );
+        }
 
-        const li = document.createElement('li');
-        li.innerHTML = `<span>${league.nome}</span> <button title="Favoritar">⭐</button>`;
-        li.querySelector('button').onclick = (e) => {
-            e.stopPropagation();
-            toggleFavorite(league.id, league.nome);
-        };
-        list.appendChild(li);
+        customLeagues.forEach(league => {
+            const li = document.createElement('li');
+            li.innerHTML = `<span>${league.nome}</span> <button title="Favoritar">⭐</button>`;
+            li.querySelector('button').onclick = (e) => {
+                e.stopPropagation();
+                toggleFavorite(league.id, league.nome);
+            };
+            list.appendChild(li);
+        });
+
+        // Para eSports, tenta adicionar também as ligas tradicionais da API
+        if (sportNameId === "eSports" || sportNameId === "Esports") {
+            try {
+                const res = await fetch(`${API_BASE}search_all_leagues.php?s=eSports`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data?.countrys) {
+                        data.countrys
+                            .filter(l => l.strLeague && !l.strLeague.trim().startsWith('_'))
+                            .forEach(league => {
+                                const li = document.createElement('li');
+                                li.innerHTML = `<span>${league.strLeague}</span> <button title="Favoritar">⭐</button>`;
+                                li.querySelector('button').onclick = (e) => {
+                                    e.stopPropagation();
+                                    toggleFavorite(league.idLeague, league.strLeague);
+                                };
+                                list.appendChild(li);
+                            });
+                    }
+                }
+            } catch (err) {
+                console.warn("Erro ao buscar outras ligas de eSports da API:", err);
+            }
+        }
         return;
     }
 
@@ -1108,7 +1143,7 @@ async function updateCalendar() {
         try {
             let eventosParaRenderizar = [];
 
-            if (fav.id === 'wsl' || fav.id === 'sls') {
+            if (fav.id === 'wsl' || fav.id === 'sls' || fav.id === 'cblol' || fav.id === 'cs2_tier_s') {
                 try {
                     const q = query(collection(db, "sport_events"), where("leagueId", "==", fav.id));
                     const querySnapshot = await getDocs(q);
@@ -1130,7 +1165,7 @@ async function updateCalendar() {
                             venue: ev.venue || '',
                             tv: ev.tv || '',
                             status: ev.status || '',
-                            sportName: fav.id === 'wsl' ? 'Surfe' : 'Skate'
+                            sportName: fav.id === 'wsl' ? 'Surfe' : (fav.id === 'sls' ? 'Skate' : 'eSports')
                         });
                     });
                 } catch (err) {
